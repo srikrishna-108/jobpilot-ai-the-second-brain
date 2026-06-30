@@ -1,0 +1,156 @@
+{
+  "name": "JobPilot — Resume Tailor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tailor-resume",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "51b51ac9-83f9-4ecf-9e40-51603a058b6e",
+      "name": "Webhook",
+      "webhookId": "e9a501cc-43ab-4325-9004-70613b4b9234"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert ATS resume optimizer for Machine Learning, \nData Science, and AI Engineering roles in India.\n\nCANDIDATE RESUME:\n{{ $json.body.resumeText }}\n\nJOB DESCRIPTION:\n{{ $json.body.jobDescription }}\n\nTARGET ROLE: {{ $json.body.targetRole }}\nCOMPANY: {{ $json.body.companyName }}\n\nRewrite this resume tailored exactly for this job. Follow these rules:\n\n1. Extract every technical keyword from the JD and inject them naturally into the resume\n2. Mirror exact phrases from the JD in bullet points\n3. Keep all metrics and numbers from original resume intact\n4. Put most important JD keywords in first two bullets of each experience section\n5. Reorder skills so most relevant to this JD appear first\n6. Use the exact job title from the JD at the top\n\nReturn output in exactly this format and nothing else:\n\nTAILORED_RESUME_START\n[complete rewritten resume here]\nTAILORED_RESUME_END\n\nATS_SCORE: [number between 60-99]%\n\nKEYWORDS_ADDED: [comma separated list]\n\nKEYWORDS_MISSING: [skills in JD candidate genuinely lacks]",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        416,
+        0
+      ],
+      "id": "00d54397-0c9b-485b-9ab7-40da4882d79e",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        192
+      ],
+      "id": "e46bc312-62ec-498e-bd12-dd40fceb0fbf",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mJWF9dkH6RQl3Fwl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.text || '';\n\nconst resumeMatch = output.match(\n  /TAILORED_RESUME_START([\\s\\S]*?)TAILORED_RESUME_END/\n);\nconst atsMatch = output.match(/ATS_SCORE:\\s*(\\d+)/);\nconst addedMatch = output.match(/KEYWORDS_ADDED:\\s*([^\\n]+)/);\nconst missingMatch = output.match(/KEYWORDS_MISSING:\\s*([^\\n]+)/);\n\nreturn [{\n  json: {\n    tailoredResume: resumeMatch ? resumeMatch[1].trim() : output,\n    atsScore: atsMatch ? atsMatch[1] + '%' : 'N/A',\n    keywordsAdded: addedMatch ? addedMatch[1].trim() : '',\n    keywordsMissing: missingMatch ? missingMatch[1].trim() : '',\n    companyName: $('Webhook').first().json.body.companyName,\n    targetRole: $('Webhook').first().json.body.targetRole\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -16
+      ],
+      "id": "40f27286-b779-45e0-a114-38cb980a593f",
+      "name": "Parse Resume Output"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1088,
+        32
+      ],
+      "id": "682511de-2b3e-485e-a495-6aa05b53ad40",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Resume Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Resume Output": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "138e69ee-0367-48e8-bc85-fa41b5dfbc1e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91cfddcfe7bd84b5d59b3043272ebaaef02b8a08bfd8ca9fec43e257e7bacc6a"
+  },
+  "nodeGroups": [],
+  "id": "6RxnxVsn1n58Rnv7",
+  "tags": []
+}
