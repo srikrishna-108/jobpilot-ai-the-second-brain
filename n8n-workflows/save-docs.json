@@ -1,0 +1,145 @@
+{
+  "name": "JobPilot — Save Docs",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "=POST",
+        "path": "save-docs",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ead716b3-4df4-4296-9f73-2b134d5c4ab8",
+      "name": "Webhook",
+      "webhookId": "38ceafda-4202-4d8a-b659-0cc40c17ac9d"
+    },
+    {
+      "parameters": {
+        "folderId": "default",
+        "title": "={{ $json.body.companyName }} — {{ $json.body.jobTitle }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ef746977-e1a4-42af-aa98-3aae3cad5920",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "1zdDAKYO3QCeCdKw",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Webhook').first().json.body.prepPlan }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "932ea9c4-6bcc-4cfd-8858-bf71f89fe86f",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "1zdDAKYO3QCeCdKw",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "432c1150-22ec-400f-92bb-9f09a2f3621a",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2490242f-2c79-4807-a91d-533deed729d5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91cfddcfe7bd84b5d59b3043272ebaaef02b8a08bfd8ca9fec43e257e7bacc6a"
+  },
+  "nodeGroups": [],
+  "id": "80sw8VNMS9Ukd4cX",
+  "tags": []
+}
