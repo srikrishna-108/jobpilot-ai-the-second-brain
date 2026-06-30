@@ -1,0 +1,202 @@
+{
+  "name": "JobPilot — Prep Plan",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prep-plan",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "46d7ede2-0201-4af3-8a95-931e9fa3d5a8",
+      "name": "Webhook",
+      "webhookId": "70f142b3-838f-4c84-81c1-4e1de29315b9"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert interview coach for ML, Data Science, \nand AI Engineering roles at Indian tech companies.\n\nROLE: {{ $('Webhook').first().json.body.jobTitle }}\nCOMPANY: {{ $('Webhook').first().json.body.companyName }}\nINTERVIEW DATE: {{ $('Webhook').first().json.body.interviewDate }}\nPREP START DATE: {{ $('Webhook').first().json.body.startDate }}\nHOURS PER DAY: {{ $('Webhook').first().json.body.hoursPerDay }}\nFOCUS AREAS: {{ $('Webhook').first().json.body.focusAreas }}\n\nCOMPANY RESEARCH:\n{{ $('Research Company').first().json.organic_results[0].snippet }}\n{{ $('Research Company').first().json.organic_results[1].snippet }}\n\nCreate a detailed day-by-day preparation plan between \nthe start date and interview date.\n\nRules:\n- Be extremely specific — name exact topics, LeetCode \n  problem numbers, free resource links\n- Allocate exactly the hours per day specified\n- Focus heavily on the selected focus areas\n- Include company-specific preparation\n- Make every single day actionable\n\nReturn in exactly this format:\n\nPREP_PLAN_START\n# Interview Prep Plan\n## Company — Role\n\n**Interview Date:** [date]\n**Hours per day:** [hours]\n\n---\n## COMPANY INTELLIGENCE\n[key facts about interview style]\n\n---\n## DAY BY DAY PLAN\n### DAY 1 — [date] — [theme]\n- [ ] Task 1\n- [ ] Task 2\n**Resources:** [free links]\n\n---\n## TOP 15 LIKELY INTERVIEW QUESTIONS\n[with answer frameworks]\n\n---\n## DAY BEFORE CHECKLIST\n[final preparation steps]\n\nPREP_PLAN_END",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "04b45fa7-1492-4e80-9f1f-115ab4639b91",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        192
+      ],
+      "id": "988d2fc3-1a1e-4392-9179-a8ce65478adf",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mJWF9dkH6RQl3Fwl",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.text || '';\nconst match = output.match(\n  /PREP_PLAN_START([\\s\\S]*?)PREP_PLAN_END/\n);\nreturn [{\n  json: {\n    prepPlan: match ? match[1].trim() : output,\n    jobTitle: $('Webhook').first().json.body.jobTitle,\n    companyName: $('Webhook').first().json.body.companyName,\n    interviewDate: $('Webhook').first().json.body.interviewDate\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -16
+      ],
+      "id": "27e74805-fd42-4549-91ca-a00d9f66f595",
+      "name": "Parse Prep Plan"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "1a5d57ae-a158-4b47-bb56-0f095f4ab331",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "={{ $('Webhook').first().json.body.companyName }} interview process data science machine learning glassdoor 2024 2025"
+            },
+            {
+              "name": "api_key",
+              "value": "9eaaf2ffc2aa636246dc0bc4e93d2926d36031a57aa11e4616cff4045fdea228"
+            },
+            {
+              "name": "num",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "91ba4b41-878b-4a16-8c01-97e47002e92e",
+      "name": "Research Company"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Research Company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Prep Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Prep Plan": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Company": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "59e1598a-f51d-48ae-9967-5d0708f1c76a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91cfddcfe7bd84b5d59b3043272ebaaef02b8a08bfd8ca9fec43e257e7bacc6a"
+  },
+  "nodeGroups": [],
+  "id": "Ar5Xlig5zQeK5ly4",
+  "tags": []
+}
