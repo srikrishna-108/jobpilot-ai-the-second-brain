@@ -1,0 +1,152 @@
+{
+  "name": "JobPilot — Job Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "search-jobs",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "658ece73-3425-4cd6-ab97-53d7963a7590",
+      "name": "Webhook",
+      "webhookId": "0f2a46fc-08dd-4d79-b090-539fe7130e05"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobs = $input.first().json.jobs_results || [];\nconst userSkills = ($('Webhook').first().json.body.skills || '')\n  .toLowerCase().split(',').map(s => s.trim()).filter(s => s);\nconst excludeKeywords = ($('Webhook').first().json.body.excludeKeywords || '')\n  .toLowerCase().split(',').map(s => s.trim()).filter(s => s);\n\nconst processed = jobs\n  .filter(job => {\n    const text = (job.title + ' ' + (job.description || '')).toLowerCase();\n    return !excludeKeywords.some(k => k && text.includes(k));\n  })\n  .map(job => {\n    const text = (job.title + ' ' + (job.description || '')).toLowerCase();\n    const matched = userSkills.filter(s => s && text.includes(s));\n    const score = userSkills.length > 0\n      ? Math.round((matched.length / userSkills.length) * 100)\n      : 50;\n    return {\n      title: job.title || '',\n      company: job.company_name || '',\n      location: job.location || '',\n      description: (job.description || '').substring(0, 200) + '...',\n      postedAt: job.detected_extensions?.posted_at || 'Recently',\n      applyLink: job.related_links?.[0]?.link || '#',\n      matchScore: score,\n      matchedSkills: matched,\n      salary: job.detected_extensions?.salary ||\n               $('Webhook').first().json.body.salaryRange || 'Not specified'\n    };\n  })\n  .sort((a, b) => b.matchScore - a.matchScore)\n  .slice(0, 10);\n\nreturn processed.map(job => ({ json: job }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "db92148b-f99f-47e6-94be-d6378293e904",
+      "name": "Score and Process Jobs"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google_jobs"
+            },
+            {
+              "name": "q",
+              "value": "={{ $('Webhook').first().json.body.jobTitle }} {{ $('Webhook').first().json.body.skills }} jobs"
+            },
+            {
+              "name": "location",
+              "value": "={{ $('Webhook').first().json.body.location }}"
+            },
+            {
+              "name": "api_key",
+              "value": "9eaaf2ffc2aa636246dc0bc4e93d2926d36031a57aa11e4616cff4045fdea228"
+            },
+            {
+              "name": "hl",
+              "value": "en"
+            },
+            {
+              "name": "gl",
+              "value": "in"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "b56789a2-0584-432a-8e71-92dffd5fffaa",
+      "name": "Search SerpAPI"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        608,
+        16
+      ],
+      "id": "ea78785c-70b9-4692-b309-d86603693d83",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search SerpAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search SerpAPI": {
+      "main": [
+        [
+          {
+            "node": "Score and Process Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score and Process Jobs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "175e04cb-5652-49ee-97dc-e15a75159bed",
+  "meta": {
+    "instanceId": "91cfddcfe7bd84b5d59b3043272ebaaef02b8a08bfd8ca9fec43e257e7bacc6a"
+  },
+  "nodeGroups": [],
+  "id": "HDNavXnoG7aavTBh",
+  "tags": []
+}
