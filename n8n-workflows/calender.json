@@ -1,0 +1,140 @@
+{
+  "name": "JobPilot — Calendar",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "schedule-calendar",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a8a47d64-6166-40b7-826b-a82f05de8364",
+      "name": "Webhook",
+      "webhookId": "322b7e28-6c84-438a-b3d4-3d73d2f96cea"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst startDate = new Date(body.startDate);\nconst endDate = new Date(body.interviewDate);\nconst hours = parseInt(body.hoursPerDay) || 2;\nconst events = [];\nlet dayCount = 1;\n\nfor (let d = new Date(startDate); d < endDate; \n     d.setDate(d.getDate() + 1)) {\n  const dateStr = d.toISOString().split('T')[0];\n  events.push({\n    summary: `JobPilot Prep Day ${dayCount} — ${body.companyName}`,\n    description: `Day ${dayCount} interview prep for ${body.jobTitle} at ${body.companyName}.`,\n    startDateTime: `${dateStr}T09:00:00`,\n    endDateTime: `${dateStr}T${String(9 + hours).padStart(2,'0')}:00:00`,\n    timeZone: 'Asia/Kolkata'\n  });\n  dayCount++;\n}\n\nevents.push({\n  summary: `INTERVIEW — ${body.jobTitle} at ${body.companyName}`,\n  description: `Your interview today. You are prepared!`,\n  startDateTime: `${body.interviewDate}T10:00:00`,\n  endDateTime: `${body.interviewDate}T11:00:00`,\n  timeZone: 'Asia/Kolkata'\n});\n\nreturn events.map(e => ({ json: e }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5db25a85-3fcf-48d8-b294-7947a209d9d0",
+      "name": " Generate Events"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "srikrishnacharansai@gmail.com"
+        },
+        "start": "={{ $json.startDateTime }}",
+        "end": "={{ $json.endDateTime }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}",
+          "location": " Asia/Kolkata",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8df944fd-9486-4476-b7cb-15c29380b4dc",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Y3cmvH2s60uS03pP",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": " Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        624,
+        0
+      ],
+      "id": "5dcc79d3-7536-4fd4-9a76-138d9b7f76ad",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": " Generate Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Generate Events": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c03f4ca6-cc80-4868-97a1-2db108ce0162",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91cfddcfe7bd84b5d59b3043272ebaaef02b8a08bfd8ca9fec43e257e7bacc6a"
+  },
+  "nodeGroups": [],
+  "id": "iABK5Cnrcj5lPlPY",
+  "tags": []
+}
